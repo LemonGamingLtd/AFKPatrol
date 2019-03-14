@@ -5,6 +5,7 @@ import java.util.Random;
 import java.util.UUID;
 
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.Configuration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -19,10 +20,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class AFKPatrol extends JavaPlugin implements Listener {
 
-	private static final Long NOTIFY_PERIOD = 45L;
-	private static final Long ACTION_PERIOD = 60L;
-	private static final Integer KICK_COUNT = 10;
-	private static final Long INTERACT_PERIOD = 10L;
+	private static Long notifyPeriod = 45L;
+	private static Long actionPeriod = 60L;
+	private static Integer kickCount = 10;
+	private static Long interactGracePeriod = 10L;
+	private static Boolean shouldNotify = true;
+
 	private HashMap<UUID, Long> lastMove = new HashMap<UUID, Long>();
 	private HashMap<UUID, Long> lastInteract = new HashMap<UUID, Long>();
 	private HashMap<UUID, Integer> nonceList = new HashMap<UUID, Integer>();
@@ -31,6 +34,16 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable() {
 		getLogger().info("AFKPatrol is now loading...");
+
+		ConfigManager.getInstance().registerHandler("config.yml", getDataFolder());
+		Configuration config = ConfigManager.getInstance().getHandler("config.yml").getConfig();
+
+		notifyPeriod = config.getLong("notify_period");
+		actionPeriod = config.getLong("action_period");
+		kickCount = config.getInt("disconnect_count");
+		interactGracePeriod = config.getLong("interact_grace_period");
+		shouldNotify = config.getBoolean("should_notify");
+
 		getServer().getPluginManager().registerEvents(this, this);
 	}
 
@@ -85,16 +98,34 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 	public void onChat(AsyncPlayerChatEvent e) {
 		Player target = e.getPlayer();
 
+		// If the player has been notified
 		if (nonceList.containsKey(target.getUniqueId())) {
+
+			// If their message contains the number we asked for
 			if (e.getMessage().contains(nonceList.get(target.getUniqueId()).toString())) {
+
+				// Reset their last move count to now!
 				lastMove.put(target.getUniqueId(), (System.currentTimeMillis() / 1000L));
+
+				// Remove them from the action lists
 				nonceList.remove(target.getUniqueId());
 				actionList.remove(target.getUniqueId());
+
+				// Cancel this chat event as no one else needs to see it
 				e.setCancelled(true);
+
+				// Send them a message!
 				target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&l<< &2AFK PATROL &f&l>> &a&lThank you :)"));
+
 			} else {
+
+				// If their message doesn't have the number we have asked for, AND we are taking action
 				if (actionList.containsKey(target.getUniqueId())) {
+
+					// Cancel their message
 					e.setCancelled(true);
+
+					// Send them a new message!!
 					target.sendMessage(ChatColor.translateAlternateColorCodes('&', "       &c- - - &f&l<< &4AFK PATROL &f&l>> &c- - -"));
 					target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Your action has been cancelled because you are AFK mining!"));
 					target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Please move or type the following number: &c" + nonceList.get(target.getUniqueId())));
@@ -109,6 +140,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 	public void onCommandPreProcess(PlayerCommandPreprocessEvent e) {
 		Player target = e.getPlayer();
 
+		// If we are taking action against them, they don't need to be doing commands!
 		if (actionList.containsKey(target.getUniqueId())) {
 			e.setCancelled(true);
 			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "       &c- - - &f&l<< &4AFK PATROL &f&l>> &c- - -"));
@@ -133,6 +165,8 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		// Only register movement if their coordinate actually changes
 		Player target = e.getPlayer();
 		lastMove.put(target.getUniqueId(), (System.currentTimeMillis() / 1000L));
+
+		// If they have moved then we can safely remove them from the action lists!
 		if (nonceList.containsKey(target.getUniqueId())) {
 			nonceList.remove(target.getUniqueId());
 			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&l<< &2AFK PATROL &f&l>> &a&lThank you :)"));
@@ -145,30 +179,47 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onInteract(PlayerInteractEvent e) {
 		Player target = e.getPlayer();
-		
+
+		// If they bypass this plugin, we dont need to check their interaction
 		if (target.hasPermission("afkpatrol.bypass")) return;
 
+		// If they for some reason dont have a last move registered, lets turn the other cheek...
 		if (!lastMove.containsKey(target.getUniqueId())) return;
 
+		// Get the current time
 		Long currentTime = System.currentTimeMillis() / 1000L;
+		// How long since they interacted last?
 		Long interactPeriod = currentTime - lastInteract.get(target.getUniqueId());
 
-		if (interactPeriod > INTERACT_PERIOD) {
+		// If its been a long time since they interacted last, they probably have just come back from being AFK
+		// We can reset their move timer, they havent been interacting, so werent AFK mining!
+		if (interactPeriod > interactGracePeriod) {
 			lastMove.put(target.getUniqueId(), (System.currentTimeMillis() / 1000L));
 		}
 
+		// Calculate how long since they moved last
 		Long period = currentTime - lastMove.get(target.getUniqueId());
+		// Lets also update their last interact time to now
 		lastInteract.put(target.getUniqueId(), (System.currentTimeMillis() / 1000L));
 
-		// IF ACTION SHOULD BE TAKEN
-		if (period > ACTION_PERIOD) {
+
+
+		// IF ACTION SHOULD BE TAKEN (THEY HAVENT MOVED FOR A LONG TIME AND ARE INTERACTING!)
+		if (period > actionPeriod) {
+
+			// If they for some reason aren't already in the nonce list, lets add them!
+			if (!nonceList.containsKey(target.getUniqueId())) {
+				Integer nonce = new Random().nextInt(9999);
+				nonceList.put(target.getUniqueId(), nonce);
+			}
 
 			// If the player has already been "actioned"
 			if (actionList.containsKey(target.getUniqueId())) {
 				actionList.put(target.getUniqueId(), actionList.get(target.getUniqueId()) - 1);
-				// If the player hasn't get been "actioned"
+				
+			// If the player hasn't get been "actioned"
 			} else {
-				actionList.put(target.getUniqueId(), KICK_COUNT);
+				actionList.put(target.getUniqueId(), kickCount);
 			}
 
 			// CANCEL THE EVENT
@@ -186,8 +237,11 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Please move or type the following number: &c" + nonceList.get(target.getUniqueId())));
 			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7You will be kicked after &c" + actionList.get(target.getUniqueId()) + " &7more AFK actions!"));
 
-			// IF THE PLAYER SHOULD BE NOTIFIED
-		} else if (period > NOTIFY_PERIOD) {
+		// IF THE PLAYER SHOULD BE NOTIFIED
+		} else if (period > notifyPeriod) {
+			
+			// If the config says not to notify them, we will deal with this when we take action!
+			if (!shouldNotify) return;
 
 			// IF THEY HAVENT BEEN NOTIFIED YET THEN LETS NOTIFY THEM!
 			if (!nonceList.containsKey(target.getUniqueId())) {
@@ -196,7 +250,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 				target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&l<< &4AFK PATROL &f&l>> &c&lPlease confirm you are not AFK mining by moving or typing: " + nonce));
 			}
 
-			// IF THE PLAYER IS JUST NORMAL!
+		// IF THE PLAYER IS JUST NORMAL!
 		} else {
 			if (nonceList.containsKey(target.getUniqueId())) {
 				nonceList.remove(target.getUniqueId());
