@@ -53,7 +53,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		shouldNotify = config.getBoolean("should_notify");
 
 		ConfigurationSection messageSection = config.getConfigurationSection("messages");
-		for (String key : messageSection.getKeys(false)) {
+		for (String key : messageSection.getKeys(true)) {
 			MessageManager.getInstance().loadMessage(key, messageSection.getString(key));
 		}
 
