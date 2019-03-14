@@ -81,6 +81,11 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 			if (!commandSender.hasPermission("afkpatrol.reload")) {
 				return false;
 			}
+			
+			if (!getDataFolder().exists()) {
+				getLogger().info("Creating plugin directory!");
+				getDataFolder().mkdirs();
+			}
 
 			ConfigManager.getInstance().getHandler("config.yml").startupConfig();
 			Configuration config = ConfigManager.getInstance().getHandler("config.yml").getConfig();
