@@ -5,7 +5,10 @@ import java.util.Random;
 import java.util.UUID;
 
 import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.Configuration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -44,6 +47,11 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		interactGracePeriod = config.getLong("interact_grace_period");
 		shouldNotify = config.getBoolean("should_notify");
 
+		ConfigurationSection messageSection = config.getConfigurationSection("messages");
+		for (String key : messageSection.getKeys(true)) {
+			MessageManager.getInstance().loadMessage(key, messageSection.getString(key));
+		}
+
 		getServer().getPluginManager().registerEvents(this, this);
 	}
 
@@ -52,47 +60,43 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		getLogger().info("AFKPatrol is now disabling...");
 	}
 
-	/*@Override
+	@Override
 	public boolean onCommand(CommandSender commandSender, Command cmd, String label, String[] args) {
-		if (cmd.getName().equalsIgnoreCase("freeze")) {
-
-			Player sender;
-
-			// Verify if the command sender is a player, and if not then display that only players may use the command
-			if (commandSender instanceof Player) {
-				sender = (Player) commandSender;
-			} else {
-				commandSender.sendMessage(ChatColor.DARK_RED + "Only players can use this command!");
-				return true;
-			}
+		if (cmd.getName().equalsIgnoreCase("afkpatrol")) {
 
 			// Verify correct command length otherwise display help message
 			if (args.length != 1) {
 				return false;
 			}
 
-			Player target = sender.getServer().getPlayer(args[0]);
-			// Make sure the player is online.
-			if (target == null) {
-				sender.sendMessage(ChatColor.DARK_RED + args[0] + " is not currently online so cannot be frozen!");
-				return true;
+			if (!args[0].equalsIgnoreCase("reload")) {
+				return false;
 			}
 
-			UUID targetUUID = target.getUniqueId();
-
-			if (frozenPlayers.containsKey(targetUUID)) {
-				frozenPlayers.remove(targetUUID);
-				target.sendMessage(ChatColor.GREEN + "You have been unfrozen!");
-				sender.sendMessage(ChatColor.AQUA + "You have unfrozen " + target.getDisplayName());
-			} else {
-				frozenPlayers.put(targetUUID, sender.getUniqueId());
-				target.sendMessage(ChatColor.AQUA + "You have been frozen by a staff member!");
-				sender.sendMessage(ChatColor.GREEN + "You have frozen " + target.getDisplayName());
+			if (!commandSender.hasPermission("afkpatrol.reload")) {
+				return false;
 			}
+
+			ConfigManager.getInstance().getHandler("config.yml").startupConfig();
+			Configuration config = ConfigManager.getInstance().getHandler("config.yml").getConfig();
+
+			notifyPeriod = config.getLong("notify_period");
+			actionPeriod = config.getLong("action_period");
+			kickCount = config.getInt("disconnect_count");
+			interactGracePeriod = config.getLong("interact_grace_period");
+			shouldNotify = config.getBoolean("should_notify");
+
+			ConfigurationSection messageSection = config.getConfigurationSection("messages");
+			for (String key : messageSection.getKeys(true)) {
+				MessageManager.getInstance().loadMessage(key, messageSection.getString(key));
+			}
+
+			commandSender.sendMessage("&aReloaded AFKPatrol");
+
 			return true;
 		}
 		return false;
-	}*/
+	}
 
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onChat(AsyncPlayerChatEvent e) {
@@ -115,7 +119,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 				e.setCancelled(true);
 
 				// Send them a message!
-				target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&l<< &2AFK PATROL &f&l>> &a&lThank you :)"));
+				target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("not_afk")));
 
 			} else {
 
@@ -126,10 +130,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 					e.setCancelled(true);
 
 					// Send them a new message!!
-					target.sendMessage(ChatColor.translateAlternateColorCodes('&', "       &c- - - &f&l<< &4AFK PATROL &f&l>> &c- - -"));
-					target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Your action has been cancelled because you are AFK mining!"));
-					target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Please move or type the following number: &c" + nonceList.get(target.getUniqueId())));
-					target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7You will be kicked after &c" + actionList.get(target.getUniqueId()) + " &7more AFK actions!"));
+					target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
 				}
 			}
 		}
@@ -143,10 +144,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		// If we are taking action against them, they don't need to be doing commands!
 		if (actionList.containsKey(target.getUniqueId())) {
 			e.setCancelled(true);
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "       &c- - - &f&l<< &4AFK PATROL &f&l>> &c- - -"));
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Your action has been cancelled because you are AFK mining!"));
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Please move or type the following number: &c" + nonceList.get(target.getUniqueId())));
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7You will be kicked after &c" + actionList.get(target.getUniqueId()) + " &7more AFK actions!"));
+			target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
 		}
 	}
 
@@ -169,7 +167,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		// If they have moved then we can safely remove them from the action lists!
 		if (nonceList.containsKey(target.getUniqueId())) {
 			nonceList.remove(target.getUniqueId());
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&l<< &2AFK PATROL &f&l>> &a&lThank you :)"));
+			target.sendMessage(ChatColor.translateAlternateColorCodes('&',  MessageManager.getInstance().getMessage("not_afk")));
 		}
 		if (actionList.containsKey(target.getUniqueId())) {
 			actionList.remove(target.getUniqueId());
@@ -216,8 +214,8 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 			// If the player has already been "actioned"
 			if (actionList.containsKey(target.getUniqueId())) {
 				actionList.put(target.getUniqueId(), actionList.get(target.getUniqueId()) - 1);
-				
-			// If the player hasn't get been "actioned"
+
+				// If the player hasn't get been "actioned"
 			} else {
 				actionList.put(target.getUniqueId(), kickCount);
 			}
@@ -227,19 +225,16 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 
 			// If the player has ignored the message too many times, then kick them!
 			if (actionList.get(target.getUniqueId()) <= 0) {
-				target.kickPlayer("AFK PATROL: You have been kicked for AFK mining!");
+				target.kickPlayer( MessageManager.getInstance().getMessage("afk_kick"));
 				return;
 			}
 
 			// Notify the player they need to stop AFK mining
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "       &c- - - &f&l<< &4AFK PATROL &f&l>> &c- - -"));
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Your action has been cancelled because you are AFK mining!"));
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7Please move or type the following number: &c" + nonceList.get(target.getUniqueId())));
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&7You will be kicked after &c" + actionList.get(target.getUniqueId()) + " &7more AFK actions!"));
+			target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
 
-		// IF THE PLAYER SHOULD BE NOTIFIED
+			// IF THE PLAYER SHOULD BE NOTIFIED
 		} else if (period > notifyPeriod) {
-			
+
 			// If the config says not to notify them, we will deal with this when we take action!
 			if (!shouldNotify) return;
 
@@ -247,14 +242,14 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 			if (!nonceList.containsKey(target.getUniqueId())) {
 				Integer nonce = new Random().nextInt(9999);
 				nonceList.put(target.getUniqueId(), nonce);
-				target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&l<< &4AFK PATROL &f&l>> &c&lPlease confirm you are not AFK mining by moving or typing: " + nonce));
+				target.sendMessage(ChatColor.translateAlternateColorCodes('&',  MessageManager.getInstance().getMessage("notify").replace("%NUMBER%", nonce.toString())));
 			}
 
-		// IF THE PLAYER IS JUST NORMAL!
+			// IF THE PLAYER IS JUST NORMAL!
 		} else {
 			if (nonceList.containsKey(target.getUniqueId())) {
 				nonceList.remove(target.getUniqueId());
-				target.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f&l<< &2AFK PATROL &f&l>> &a&lThank you :)"));
+				target.sendMessage(ChatColor.translateAlternateColorCodes('&',  MessageManager.getInstance().getMessage("not_afk")));
 			}
 			if (actionList.containsKey(target.getUniqueId())) {
 				actionList.remove(target.getUniqueId());

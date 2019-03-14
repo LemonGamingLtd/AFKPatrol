@@ -57,3 +57,4 @@ messages:
     &7Your action has been cancelled because you are AFK mining!
     &7Please move or type the following number: &c%NUMBER%
     &7You will be kicked after &c%COUNT% &7more AFK actions!
+  afk_kick: "AFK PATROL: You have been kicked for AFK mining!"
