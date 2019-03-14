@@ -1,0 +1,10 @@
+name: AFKPatrol
+main: xyz.olivermartin.afkpatrol.AFKPatrol
+version: 1.0
+author: Oliver Martin (Revilo410)
+commands:
+   afkpatrol:
+      description: Does absolutely nothing!
+      usage: /afkpatrol
+      permission: afkpatrol.afkpatrol
+      permission-message: You do not have permission (afkpatrol.afkpatrol)
