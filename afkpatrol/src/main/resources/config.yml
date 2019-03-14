@@ -1,0 +1,59 @@
+############################################################
+# +------------------------------------------------------+ #
+# |                      AFKPatrol                       | #
+# +------------------------------------------------------+ #
+############################################################
+
+# By Revilo410
+
+##################
+#   DON'T EDIT   #
+version: "1.1"   #
+##################
+
+############################################################
+# +------------------------------------------------------+ #
+# |                       General                        | #
+# +------------------------------------------------------+ #
+############################################################
+
+# A player is recognised as "AFK Mining" if they remain in one spot while regularly interacting with the world around them
+# This means that if a player tapes down their mouse button to mine automatically while they are AFK, then the plugin will trigger
+# The plugin will also trigger if they are using the same tactic to gain EXP from a mob farm
+
+# How long should someone be in the same spot while interacting before the plugin takes action?
+action_period: 60 # Time in seconds
+
+# Should the player be notified they are AFK mining before we take action?
+should_notify: true
+
+# After how long should this notification be shown?
+notify_period: 45 # Time in seconds
+
+# If the player continues to interact after we have taken action by "freezing" them, how many times before we kick them from the server?
+disconnect_count: 10
+
+# If a player doesn't perform any interactions for this amount of time, we will reset their counter so they wont be counted as "AFK Mining"
+interact_grace_period: 10 # Time in seconds
+
+
+############################################################
+# +------------------------------------------------------+ #
+# |                       Messages                       | #
+# +------------------------------------------------------+ #
+############################################################
+
+messages:
+  # Message shown when a player is notified that they are AFK mining
+  # %NUMBER% will be a randomly generated number between 0 and 9999 which the user can type to confirm they are not AFK
+  notify: "&f&l<< &4AFK PATROL &f&l>> &c&lPlease confirm you are not AFK mining by moving or typing: %NUMBER%"
+  # Message shown when a player confirms they are not AFK
+  not_afk: "&f&l<< &2AFK PATROL &f&l>> &a&lThank you :)"
+  # Message shown when we take action against a player who is AFK mining
+  # %NUMBER% will be a randomly generated number between 0 and 9999 which the user can type to confirm they are not AFK
+  # %COUNT% will be the number of interacts they can perform before they are kicked
+  action: |
+    &c       - - - &f&l<< &4AFK PATROL &f&l>> &c- - -
+    &7Your action has been cancelled because you are AFK mining!
+    &7Please move or type the following number: &c%NUMBER%
+    &7You will be kicked after &c%COUNT% &7more AFK actions!
