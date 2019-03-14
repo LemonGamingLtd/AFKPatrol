@@ -231,10 +231,10 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 				actionList.put(target.getUniqueId(), kickCount);
 				for (Player p : Bukkit.getOnlinePlayers()) {
 					if (p.hasPermission("afkpatrol.notify")) {
-						p.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f<< &4AFK Patrol &f>> &cBLOCKED AFK MINING: " + target.getName()));
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("log").replace("%NAME%", target.getName())));
 					}
 				}
-				Bukkit.getConsoleSender().sendMessage(ChatColor.translateAlternateColorCodes('&', "&f<< &4AFK Patrol &f>> &cBLOCKED AFK MINING: " + target.getName()));
+				Bukkit.getConsoleSender().sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("log").replace("%NAME%", target.getName())));
 			}
 
 			// CANCEL THE EVENT
