@@ -37,6 +37,11 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable() {
 		getLogger().info("AFKPatrol is now loading...");
+		
+		if (!getDataFolder().exists()) {
+			getLogger().info("Creating plugin directory!");
+			getDataFolder().mkdirs();
+		}
 
 		ConfigManager.getInstance().registerHandler("config.yml", getDataFolder());
 		Configuration config = ConfigManager.getInstance().getHandler("config.yml").getConfig();
