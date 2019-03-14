@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -37,7 +38,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable() {
 		getLogger().info("AFKPatrol is now loading...");
-		
+
 		if (!getDataFolder().exists()) {
 			getLogger().info("Creating plugin directory!");
 			getDataFolder().mkdirs();
@@ -81,7 +82,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 			if (!commandSender.hasPermission("afkpatrol.reload")) {
 				return false;
 			}
-			
+
 			if (!getDataFolder().exists()) {
 				getLogger().info("Creating plugin directory!");
 				getDataFolder().mkdirs();
@@ -101,7 +102,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 				MessageManager.getInstance().loadMessage(key, messageSection.getString(key));
 			}
 
-			commandSender.sendMessage("&aReloaded AFKPatrol");
+			commandSender.sendMessage(ChatColor.translateAlternateColorCodes('&',"&aReloaded AFKPatrol"));
 
 			return true;
 		}
@@ -140,7 +141,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 					e.setCancelled(true);
 
 					// Send them a new message!!
-					target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
+					target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT%", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
 				}
 			}
 		}
@@ -154,7 +155,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		// If we are taking action against them, they don't need to be doing commands!
 		if (actionList.containsKey(target.getUniqueId())) {
 			e.setCancelled(true);
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
+			target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT%", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
 		}
 	}
 
@@ -225,9 +226,15 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 			if (actionList.containsKey(target.getUniqueId())) {
 				actionList.put(target.getUniqueId(), actionList.get(target.getUniqueId()) - 1);
 
-				// If the player hasn't get been "actioned"
+				// If the player hasn't yet been "actioned"
 			} else {
 				actionList.put(target.getUniqueId(), kickCount);
+				for (Player p : Bukkit.getOnlinePlayers()) {
+					if (p.hasPermission("afkpatrol.notify")) {
+						p.sendMessage(ChatColor.translateAlternateColorCodes('&', "&f<< &4AFK Patrol &f>> &cBLOCKED AFK MINING: " + target.getName()));
+					}
+				}
+				Bukkit.getConsoleSender().sendMessage(ChatColor.translateAlternateColorCodes('&', "&f<< &4AFK Patrol &f>> &cBLOCKED AFK MINING: " + target.getName()));
 			}
 
 			// CANCEL THE EVENT
@@ -240,7 +247,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 			}
 
 			// Notify the player they need to stop AFK mining
-			target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
+			target.sendMessage(ChatColor.translateAlternateColorCodes('&', MessageManager.getInstance().getMessage("action").replace("%COUNT%", actionList.get(target.getUniqueId()).toString()).replace("%NUMBER%",nonceList.get(target.getUniqueId()).toString())));
 
 			// IF THE PLAYER SHOULD BE NOTIFIED
 		} else if (period > notifyPeriod) {
