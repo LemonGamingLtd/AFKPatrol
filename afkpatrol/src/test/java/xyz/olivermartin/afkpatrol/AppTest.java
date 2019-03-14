@@ -1,4 +1,4 @@
-package com.olivermartin410.plugins.instafreeze;
+package xyz.olivermartin.afkpatrol;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
