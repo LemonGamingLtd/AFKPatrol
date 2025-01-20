@@ -29,11 +29,13 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 	private static Integer kickCount = 10;
 	private static Long interactGracePeriod = 10L;
 	private static Boolean shouldNotify = true;
+	private static Long notifyGracePeriod = 900L;
 
 	private HashMap<UUID, Long> lastMove = new HashMap<UUID, Long>();
 	private HashMap<UUID, Long> lastInteract = new HashMap<UUID, Long>();
 	private HashMap<UUID, Integer> nonceList = new HashMap<UUID, Integer>();
 	private HashMap<UUID, Integer> actionList = new HashMap<UUID, Integer>();
+	private HashMap<UUID, Long> notifyList = new HashMap<UUID, Long>();
 
 	@Override
 	public void onEnable() {
@@ -52,6 +54,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		kickCount = config.getInt("disconnect_count");
 		interactGracePeriod = config.getLong("interact_grace_period");
 		shouldNotify = config.getBoolean("should_notify");
+		notifyGracePeriod = config.getLong("notify_grace_period");
 
 		ConfigurationSection messageSection = config.getConfigurationSection("messages");
 		for (String key : messageSection.getKeys(true)) {
@@ -125,6 +128,9 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 				// Remove them from the action lists
 				nonceList.remove(target.getUniqueId());
 				actionList.remove(target.getUniqueId());
+
+				// Set notify grace period
+				notifyList.put(target.getUniqueId(), (System.currentTimeMillis() / 1000L));
 
 				// Cancel this chat event as no one else needs to see it
 				e.setCancelled(true);
@@ -211,7 +217,14 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		// Lets also update their last interact time to now
 		lastInteract.put(target.getUniqueId(), (System.currentTimeMillis() / 1000L));
 
-
+		// Are they in notify grace period?
+		if (notifyList.containsKey(target.getUniqueId())) {
+			Long notifyPeriod = currentTime - notifyList.get(target.getUniqueId());
+			if (notifyPeriod < notifyGracePeriod) {
+				return;
+			}
+			notifyList.remove(target.getUniqueId());
+		}
 
 		// IF ACTION SHOULD BE TAKEN (THEY HAVENT MOVED FOR A LONG TIME AND ARE INTERACTING!)
 		if (period > actionPeriod) {

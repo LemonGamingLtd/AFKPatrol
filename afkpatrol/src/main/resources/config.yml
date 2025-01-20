@@ -36,6 +36,8 @@ disconnect_count: 10
 # If a player doesn't perform any interactions for this amount of time, we will reset their counter so they wont be counted as "AFK Mining"
 interact_grace_period: 10 # Time in seconds
 
+# Grace period for players who have been notified and solved the captcha
+notify_grace_period: 900 # Time in seconds
 
 ############################################################
 # +------------------------------------------------------+ #
