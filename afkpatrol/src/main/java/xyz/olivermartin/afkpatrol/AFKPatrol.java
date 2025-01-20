@@ -198,7 +198,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		// Get the current time
 		Long currentTime = System.currentTimeMillis() / 1000L;
 		// How long since they interacted last?
-		Long interactPeriod = currentTime - lastInteract.get(target.getUniqueId());
+		Long interactPeriod = currentTime - lastInteract.getOrDefault(target.getUniqueId(), (System.currentTimeMillis() / 1000L));
 
 		// If its been a long time since they interacted last, they probably have just come back from being AFK
 		// We can reset their move timer, they havent been interacting, so werent AFK mining!
