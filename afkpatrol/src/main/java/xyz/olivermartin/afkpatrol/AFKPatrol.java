@@ -54,7 +54,7 @@ public final class AFKPatrol extends JavaPlugin implements Listener {
 		kickCount = config.getInt("disconnect_count");
 		interactGracePeriod = config.getLong("interact_grace_period");
 		shouldNotify = config.getBoolean("should_notify");
-		notifyGracePeriod = config.getLong("notify_grace_period");
+		notifyGracePeriod = config.getLong("notify_grace_period", 900L);
 
 		ConfigurationSection messageSection = config.getConfigurationSection("messages");
 		for (String key : messageSection.getKeys(true)) {
